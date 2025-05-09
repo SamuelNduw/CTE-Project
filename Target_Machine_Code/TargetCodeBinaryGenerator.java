@@ -1,98 +1,111 @@
 package Target_Machine_Code;
 
 import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 
-/**
- * This class translates ICR (Intermediate Code Representation) into binary instructions
- * understood by a custom virtual machine.
- */
 public class TargetCodeBinaryGenerator {
 
-    // Instruction structure
-    private record Instruction(byte opcode, byte operand, byte padding) {}
+    // Define a simple instruction class
+    static class Instruction {
+        byte opcode;
+        byte operand1;
+        byte operand2;
 
-    // Opcode definitions
-    private static final byte LOAD = 0x01;
-    private static final byte ADD = 0x02;
-    private static final byte SUB = 0x03;
-    private static final byte MUL = 0x04;
-    private static final byte DIV = 0x05;
-    private static final byte STORE = 0x06;
+        Instruction(byte opcode, byte operand1, byte operand2) {
+            this.opcode = opcode;
+            this.operand1 = operand1;
+            this.operand2 = operand2;
+        }
 
-    /**
-     * Compile a list of ICR statements into a binary file.
-     *
-     * @param icrLines       List of ICR strings (e.g., "t1 = a + b")
-     * @param memoryMapping  Map of variable names to memory addresses (e.g., a = 0x01)
-     * @param outputFile     Output path for binary file (e.g., "output.bin")
-     */
-    public static void compileICRToBinary(List<String> icrLines, Map<String, Byte> memoryMapping, String outputFile) {
+        byte[] toBytes() {
+            return new byte[]{opcode, operand1, operand2};
+        }
+    }
+
+    // Sample opcode mapping
+    static Map<String, Byte> opcodeMap = new HashMap<>();
+
+    static {
+        opcodeMap.put("LOAD", (byte) 0x01);
+        opcodeMap.put("STORE", (byte) 0x02);
+        opcodeMap.put("ADD", (byte) 0x03);
+        opcodeMap.put("SUB", (byte) 0x04);
+        opcodeMap.put("MUL", (byte) 0x05);
+        opcodeMap.put("MOV", (byte) 0x06);
+        // Add more opcodes as needed
+    }
+
+    public static void main(String[] args) {
+        String fileName = args.length > 0 ? args[0] : "optimized.icr";
+        List<String> icrLines;
+
+        try {
+            icrLines = Files.readAllLines(Paths.get(fileName));
+        } catch (IOException e) {
+            System.err.println("ERROR: Cannot read input file '" + fileName + "'.");
+            return;
+        }
+
+        List<Instruction> instructions = generateInstructions(icrLines);
+
+        List<byte[]> binaryInstructions = new ArrayList<>();
+        for (Instruction instr : instructions) {
+            binaryInstructions.add(instr.toBytes());
+        }
+
+        // Print the instructions in 1's and 0's
+        System.out.println("Generated Binary Instructions (in bits):");
+        for (byte[] instr : binaryInstructions) {
+            for (byte b : instr) {
+                String binaryString = String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
+                System.out.print(binaryString + " ");
+            }
+            System.out.println();
+        }
+
+        // Write to binary file
+        try (OutputStream out = new FileOutputStream("output.bin")) {
+            for (byte[] instr : binaryInstructions) {
+                out.write(instr);
+            }
+            System.out.println("\nBinary written to output.bin");
+        } catch (IOException e) {
+            System.err.println("ERROR: Failed to write binary output.");
+        }
+    }
+
+    private static List<Instruction> generateInstructions(List<String> icrLines) {
         List<Instruction> instructions = new ArrayList<>();
 
         for (String line : icrLines) {
             line = line.trim();
-            if (line.isEmpty()) continue;
+            if (line.isEmpty() || line.startsWith("#")) continue;
 
-            // Parse ICR line: target = left OP right
-            String[] parts = line.split("=");
-            if (parts.length != 2) throw new IllegalArgumentException("Invalid ICR line: " + line);
+            String[] parts = line.split("\\s+|,");
+            if (parts.length < 2) continue;
 
-            String target = parts[0].trim();         // e.g., t1
-            String expr = parts[1].trim();           // e.g., a + b
+            String op = parts[0].toUpperCase();
+            byte opcode = opcodeMap.getOrDefault(op, (byte) 0x00);
 
-            // Split expression into left operand, operator, right operand
-            String[] exprParts = expr.split(" ");
-            if (exprParts.length != 3) throw new IllegalArgumentException("Invalid expression in ICR: " + expr);
+            byte operand1 = parts.length > 1 ? parseOperand(parts[1]) : 0;
+            byte operand2 = parts.length > 2 ? parseOperand(parts[2]) : 0;
 
-            String left = exprParts[0];
-            String op = exprParts[1];
-            String right = exprParts[2];
-
-            byte opCode = switch (op) {
-                case "+" -> ADD;
-                case "-" -> SUB;
-                case "*" -> MUL;
-                case "/" -> DIV;
-                default -> throw new IllegalArgumentException("Unsupported operator: " + op);
-            };
-
-            // Build machine instructions: LOAD left → [OP] right → STORE target
-            instructions.add(new Instruction(LOAD, memoryMapping.get(left), (byte) 0));
-            instructions.add(new Instruction(opCode, memoryMapping.get(right), (byte) 0));
-            instructions.add(new Instruction(STORE, memoryMapping.get(target), (byte) 0));
+            instructions.add(new Instruction(opcode, operand1, operand2));
         }
 
-        // Write instructions to binary file
-        try (DataOutputStream dos = new DataOutputStream(new FileOutputStream(outputFile))) {
-            for (Instruction inst : instructions) {
-                dos.writeByte(inst.opcode());
-                dos.writeByte(inst.operand());
-                dos.writeByte(inst.padding());  // keep uniform 3-byte format
-            }
-            System.out.println("✅ Binary compiled and saved to: " + outputFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        return instructions;
     }
 
-    // Optional: For standalone testing (e.g., java TargetCodeBinaryGenerator)
-    public static void main(String[] args) {
-        List<String> icr = List.of(
-            "t1 = a + b",
-            "t2 = t1 * c",
-            "t3 = t2 - d"
-        );
-
-        Map<String, Byte> memoryMap = new HashMap<>();
-        memoryMap.put("a", (byte) 0x01);
-        memoryMap.put("b", (byte) 0x02);
-        memoryMap.put("c", (byte) 0x03);
-        memoryMap.put("d", (byte) 0x04);
-        memoryMap.put("t1", (byte) 0x10);
-        memoryMap.put("t2", (byte) 0x11);
-        memoryMap.put("t3", (byte) 0x12);
-
-        compileICRToBinary(icr, memoryMap, "output.bin");
+    private static byte parseOperand(String token) {
+        token = token.trim();
+        if (token.toUpperCase().startsWith("R")) {
+            return Byte.parseByte(token.substring(1)); // R1 -> 1
+        }
+        try {
+            return Byte.parseByte(token);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }
