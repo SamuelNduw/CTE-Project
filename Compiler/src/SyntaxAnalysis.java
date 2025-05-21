@@ -2,60 +2,66 @@ import java.util.*;
 
 public class SyntaxAnalysis {
 
-    static Set<String> validIdentifiers = new HashSet<>();
+    static final Map<String, Integer> identifierToDigit = new HashMap<>();
 
     static {
-        for (char c = 'A'; c <= 'Z'; c++) validIdentifiers.add(String.valueOf(c));
-        for (char c = 'a'; c <= 'z'; c++) validIdentifiers.add(String.valueOf(c));
+        for (int i = 0; i < 26; i++) {
+            identifierToDigit.put(String.valueOf((char) ('A' + i)), i + 1);
+            identifierToDigit.put(String.valueOf((char) ('a' + i)), i + 1);
+        }
     }
 
     void derive(String line) {
-        String[] tokens = line.split("\\s+|(?=[+\\-*/=;<>%$&])|(?<=[+\\-*/=;<>%$&])");
+        System.out.println("GET A DERIVATION FOR: " + line);
 
-        List<String> rhs = new ArrayList<>();
-        boolean equalsSeen = false;
-        for (String token : tokens) {
-            if (token.equals("=")) {
-                equalsSeen = true;
-                continue;
-            }
-            if (equalsSeen && !token.isEmpty()) {
-                rhs.add(token);
-            }
+        // Strip known keywords
+        line = line.replaceAll("LET|WRITE|INPUT|INTEGER|BEGIN|END", "").trim();
+
+        // Handle assignment
+        int equalIndex = line.indexOf('=');
+        String lhs = equalIndex != -1 ? line.substring(0, equalIndex).trim() : "";
+        String rhs = equalIndex != -1 ? line.substring(equalIndex + 1).trim() : line;
+
+        // Tokenize
+        String[] tokens = rhs.split("(?=[+\\-*/()])|(?<=[+\\-*/()])|\\s+");
+        List<String> cleaned = new ArrayList<>();
+        for (String t : tokens) {
+            if (!t.isBlank()) cleaned.add(t.trim());
         }
 
-        if (rhs.isEmpty()) {
-            System.out.println("No expression to derive.");
-            return;
-        }
+        // Step-by-step transformations
+        List<String> steps = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
 
-        String step = "E -> " + String.join(" ", rhs);
-        System.out.println(step);
-
-        StringBuilder current = new StringBuilder(String.join(" ", rhs));
-
-        for (String token : rhs) {
+        // Step 1: Replace all identifiers with E<digit>
+        for (String token : cleaned) {
             if (isIdentifier(token)) {
-                int index = current.indexOf(token);
-                if (index >= 0) {
-                    current.replace(index, index + token.length(), "E" + token);
-                    System.out.println("-> " + current);
-                }
+                current.append("E").append(identifierToDigit.get(token)).append(" ");
+            } else {
+                current.append(token).append(" ");
+            }
+        }
+        steps.add(current.toString().trim());
+
+        // Step 2: Replace E<digit> with identifier, one at a time (in reverse of original cleaned list)
+        String step = current.toString();
+        for (String token : cleaned) {
+            if (isIdentifier(token)) {
+                String eToken = "E" + identifierToDigit.get(token);
+                step = step.replaceFirst(eToken, token);
+                steps.add(step.trim());
             }
         }
 
-        for (String token : rhs) {
-            if (isIdentifier(token)) {
-                int index = current.indexOf("E" + token);
-                if (index >= 0) {
-                    current.replace(index, index + token.length() + 1, token);
-                    System.out.println("-> " + current);
-                }
-            }
+        // Print all steps
+        for (String s : steps) {
+            System.out.println(s);
         }
+        System.out.println();
     }
 
+
     public static boolean isIdentifier(String token) {
-        return validIdentifiers.contains(token);
+        return identifierToDigit.containsKey(token);
     }
 }

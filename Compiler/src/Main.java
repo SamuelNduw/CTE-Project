@@ -37,7 +37,6 @@ public class Main {
         // Syntax Analysis
         SyntaxAnalysis analyser = new SyntaxAnalysis();
         for (String line : vlang) {
-            System.out.println("\nGET A DERIVATION FOR: " + line);
             analyser.derive(line);
         }
 
