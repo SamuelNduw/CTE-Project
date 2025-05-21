@@ -1,12 +1,14 @@
 import java.util.*;
 
 public class SyntaxAnalysis {
-
-    static Set<String> validIdentifiers = new HashSet<>();
+//
+    static final Map<String, Integer> identifierToDigit = new HashMap<>();
 
     static {
-        for (char c = 'A'; c <= 'Z'; c++) validIdentifiers.add(String.valueOf(c));
-        for (char c = 'a'; c <= 'z'; c++) validIdentifiers.add(String.valueOf(c));
+        for (int i = 0; i < 26; i++) {
+            identifierToDigit.put(String.valueOf((char) ('A' + i)), i + 1);
+            identifierToDigit.put(String.valueOf((char) ('a' + i)), i + 1);
+        }
     }
 
     public static void main(String[] args) {
@@ -31,52 +33,55 @@ public class SyntaxAnalysis {
     }
 
     public static void derive(String line) {
-        String[] tokens = line.split("\\s+|(?=[+\\-*/=;<>%$&])|(?<=[+\\-*/=;<>%$&])");
+        // Remove LET, WRITE, etc., to isolate the expression
+        line = line.replaceAll("LET|WRITE|INPUT|INTEGER|BEGIN|END", "").trim();
 
-        List<String> rhs = new ArrayList<>();
-        boolean equalsSeen = false;
-        for (String token : tokens) {
-            if (token.equals("=")) {
-                equalsSeen = true;
-                continue;
-            }
-            if (equalsSeen && !token.isEmpty()) {
-                rhs.add(token);
-            }
+        // Handle assignment
+        int equalIndex = line.indexOf('=');
+        String rhs = (equalIndex != -1) ? line.substring(equalIndex + 1).trim() : line;
+
+        // Tokenize using operators and whitespace
+        String[] tokens = rhs.split("(?=[+\\-*/])|(?<=[+\\-*/])|\\s+");
+        List<String> cleaned = new ArrayList<>();
+        for (String t : tokens) {
+            if (!t.isBlank()) cleaned.add(t.trim());
         }
 
-        if (rhs.isEmpty()) {
-            System.out.println("No expression to derive.");
-            return;
-        }
-
-        String step = "E -> " + String.join(" ", rhs);
-        System.out.println(step);
-
-        StringBuilder current = new StringBuilder(String.join(" ", rhs));
-
-        for (String token : rhs) {
+        // Step 1: Identifier → E<digit>
+        StringBuilder step1 = new StringBuilder();
+        for (String token : cleaned) {
             if (isIdentifier(token)) {
-                int index = current.indexOf(token);
-                if (index >= 0) {
-                    current.replace(index, index + token.length(), "E" + token);
-                    System.out.println("-> " + current);
-                }
+                step1.append("E").append(identifierToDigit.get(token)).append(" ");
+            } else {
+                step1.append(token).append(" ");
+            }
+        }
+        System.out.println(step1.toString().trim() + ";");
+
+        // Step 2: E<digit> → digit<digit>
+        String step2 = step1.toString();
+        for (String token : cleaned) {
+            if (isIdentifier(token)) {
+                String eToken = "E" + identifierToDigit.get(token);
+                String dToken = "digit" + identifierToDigit.get(token);
+                step2 = step2.replaceFirst(eToken, dToken);
+                System.out.println(step2.trim() + ";");
             }
         }
 
-        for (String token : rhs) {
+        // Step 3: digit<digit> → actual digit
+        String step3 = step2;
+        for (String token : cleaned) {
             if (isIdentifier(token)) {
-                int index = current.indexOf("E" + token);
-                if (index >= 0) {
-                    current.replace(index, index + token.length() + 1, token);
-                    System.out.println("-> " + current);
-                }
+                String dToken = "digit" + identifierToDigit.get(token);
+                String number = identifierToDigit.get(token).toString();
+                step3 = step3.replaceFirst(dToken, number);
+                System.out.println(step3.trim() + ";");
             }
         }
     }
 
     public static boolean isIdentifier(String token) {
-        return validIdentifiers.contains(token);
+        return identifierToDigit.containsKey(token);
     }
 }
