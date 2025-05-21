@@ -24,8 +24,8 @@ public class Main {
                 "N = G/H-I+a*B/c",
         };
 
-        System.out.println("--- LEXICAL ANALYSIS ---");
         // Lexical Analysis
+        System.out.println("--- LEXICAL ANALYSIS ---");
         LexicalAnalyzer lexer = new LexicalAnalyzer();
         for (String line : vlang) {
             System.out.println("Line: " + line);
@@ -91,6 +91,14 @@ public class Main {
         List<String> threeAddress = codeOptimisation.convertToThreeAddress(assembly);
         for (String line : threeAddress) {
             System.out.println(line);
+        }
+
+        // Target Machine Code
+        System.out.println("--- TARGET MACHINE CODE ---");
+        TargetMachineCode tmc = new TargetMachineCode();
+        ArrayList<String> binaryCodeList = tmc.binaryConversion(threeAddress);
+        for(String binaryString : binaryCodeList){
+            System.out.println(binaryString);
         }
     }
 }
