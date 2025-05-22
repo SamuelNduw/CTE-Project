@@ -11,29 +11,56 @@ public class SyntaxAnalysis {
         }
     }
 
-    void derive(String line) {
+    ArrayList<String> derive(String line) {
+
+        ArrayList<String> strValue = new ArrayList<>();
+
         System.out.println("GET A DERIVATION FOR: " + line);
+
+        // Disallow semicolons
+        if (line.contains(";")) {
+            strValue.add("SYNTAX ERROR: Unexpected ';' in line. -> " + line);
+            return strValue;
+        }
 
         // Strip known keywords
         line = line.replaceAll("LET|WRITE|INPUT|INTEGER|BEGIN|END", "").trim();
 
         // Handle assignment
         int equalIndex = line.indexOf('=');
-        String lhs = equalIndex != -1 ? line.substring(0, equalIndex).trim() : "";
-        String rhs = equalIndex != -1 ? line.substring(equalIndex + 1).trim() : line;
+        if (equalIndex == -1) {
+            strValue.add(" ");
+            return strValue;
+        }
 
-        // Tokenize
+        String lhs = line.substring(0, equalIndex).trim();
+        String rhs = line.substring(equalIndex + 1).trim();
+
+        if (lhs.isEmpty() || rhs.isEmpty()) {
+            strValue.add("SYNTAX ERROR: Empty left-hand side or right-hand side.");
+            return strValue;
+        }
+
+        // Tokenize and clean
         String[] tokens = rhs.split("(?=[+\\-*/()])|(?<=[+\\-*/()])|\\s+");
         List<String> cleaned = new ArrayList<>();
         for (String t : tokens) {
             if (!t.isBlank()) cleaned.add(t.trim());
         }
 
-        // Step-by-step transformations
+        // Detect consecutive operators
+        String operators = "+-*/";
+        for (int i = 0; i < cleaned.size() - 1; i++) {
+            if (operators.contains(cleaned.get(i)) && operators.contains(cleaned.get(i + 1))) {
+                strValue.add("SYNTAX ERROR: Consecutive operators -> " + line);
+                return strValue;
+            }
+        }
+
+        // Derivation steps
         List<String> steps = new ArrayList<>();
         StringBuilder current = new StringBuilder();
 
-        // Step 1: Replace all identifiers with E<digit>
         for (String token : cleaned) {
             if (isIdentifier(token)) {
                 current.append("E").append(identifierToDigit.get(token)).append(" ");
@@ -43,21 +70,18 @@ public class SyntaxAnalysis {
         }
         steps.add(current.toString().trim());
 
-        // Step 2: Replace E<digit> with identifier, one at a time (in reverse of original cleaned list)
         String step = current.toString();
         for (String token : cleaned) {
             if (isIdentifier(token)) {
-                String eToken = "E" + identifierToDigit.get(token);
-                step = step.replaceFirst(eToken, token);
+                step = step.replaceFirst("E" + identifierToDigit.get(token), token);
                 steps.add(step.trim());
             }
         }
 
-        // Print all steps
         for (String s : steps) {
-            System.out.println(s);
+            strValue.add(s);
         }
-        System.out.println();
+        return strValue;
     }
 
 

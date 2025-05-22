@@ -26,17 +26,21 @@ public class SemanticAnalyser {
     public boolean analyzeLine(String line) {
         String upperLine = line.toUpperCase().trim();
 
+        // Check for disallowed symbols
+        if (line.matches(".*[\\%\\$&<>;].*")) {
+            System.err.println("Semantic Error: Line contains disallowed symbol(s): %, $, &, <, >, ;");
+            return false;
+        }
+
         if (upperLine.startsWith("INTEGER") || upperLine.startsWith("INPUT")) {
             registerDeclarations(line);
             return true;
         }
 
-        // Ignore lines like BEGIN, END, etc.
         for (String keyword : RESERVED_KEYWORDS) {
             if (upperLine.equals(keyword)) return true;
         }
 
-        // If it's an assignment line, check all identifiers used
         if (line.contains("=")) {
             List<String> tokens = extractTokens(line);
 
@@ -52,6 +56,7 @@ public class SemanticAnalyser {
 
         return true;
     }
+
 
     // Tokenize a line into identifiers and operators
     private List<String> extractTokens(String line) {
