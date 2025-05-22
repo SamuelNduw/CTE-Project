@@ -19,12 +19,6 @@ public class Main {
         vlang.add("WRITEE F;");
         vlang.add("END");
 
-        String[] vlang2 = {
-                "LET G = a + c",
-                "M = A/B+C",
-                "N = G/H-I+a*B/c",
-        };
-
         Set<Integer> setOfInvalid = new HashSet<>();
 
         // Lexical Analysis

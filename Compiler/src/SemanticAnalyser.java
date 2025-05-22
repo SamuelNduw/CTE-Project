@@ -41,18 +41,18 @@ public class SemanticAnalyser {
             if (upperLine.equals(keyword)) return true;
         }
 
-        if (line.contains("=")) {
-            List<String> tokens = extractTokens(line);
-
-            for (String token : tokens) {
-                if (token.matches("[A-Za-z]+") && !RESERVED_KEYWORDS.contains(token.toUpperCase())) {
-                    if (!declaredIdentifiers.contains(token)) {
-                        System.err.println("Semantic Error: Identifier '" + token + "' used before declaration.");
-                        return false;
-                    }
-                }
-            }
-        }
+//        if (line.contains("=")) {
+//            List<String> tokens = extractTokens(line);
+//
+//            for (String token : tokens) {
+//                if (token.matches("[A-Za-z]+") && !RESERVED_KEYWORDS.contains(token.toUpperCase())) {
+//                    if (!declaredIdentifiers.contains(token)) {
+//                        System.err.println("Semantic Error: Identifier '" + token + "' used before declaration.");
+//                        return false;
+//                    }
+//                }
+//            }
+//        }
 
         return true;
     }
