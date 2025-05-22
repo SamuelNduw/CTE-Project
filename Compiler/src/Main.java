@@ -51,6 +51,7 @@ public class Main {
         vlang = new ArrayList<>(cleaned);
 
         setOfInvalid.clear();
+
         // Syntax Analysis
         System.out.println("--- SYNTAX ANALYSIS ---");
         SyntaxAnalysis analyser = new SyntaxAnalysis();
@@ -59,8 +60,11 @@ public class Main {
             if (stepsList.size() == 1){
                 char firstChar = stepsList.get(0).charAt(0);
                 if(firstChar == ' '){
+                    System.out.println("No derivation");
+                    System.out.println();
                     continue;
                 }
+                System.out.println("Error in derivation");
                 System.err.println(stepsList.get(0));
                 setOfInvalid.add(i);
             }else{
